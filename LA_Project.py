@@ -27,19 +27,25 @@ robot_center = None
 robot_yaw = 0.0
 is_moving = False
 
-def calculate_homography_svd(src_pts, dst_pts):
+def calculate_homography_math(src_pts, dst_pts):
     A = []
     for i in range(4):
         x, y = src_pts[i]
         x_prime, y_prime = dst_pts[i]
-        
+
         A.append([-x, -y, -1, 0, 0, 0, x * x_prime, y * x_prime, x_prime])
         A.append([0, 0, 0, -x, -y, -1, x * y_prime, y * y_prime, y_prime])
         
     A = np.array(A)
-    U, S, Vt = np.linalg.svd(A)
-    H_flat = Vt[-1]
+    
+    AtA = np.dot(A.T, A)
+    
+    eigenvalues, eigenvectors = np.linalg.eigh(AtA)
+    
+    H_flat = eigenvectors[:, 0]
+    
     H = H_flat.reshape(3, 3)
+    
     H = H / H[2, 2]
     
     return H
@@ -114,7 +120,7 @@ def mouse_event(event, u, v, flags, param):
                     print(f"Floor: point {len(clicked_points)} -> [{r_x}, {r_y}]")
                     
                     if len(clicked_points) == 4:
-                        H_matrix = calculate_homography_svd(clicked_points, world_pts)
+                        H_matrix = calculate_homography_math(clicked_points, world_pts)
                         calibration_stage = 1
                         print("\n=== FLOOR CALIBRATED ===")
                         print("Click: 1) BACK part, 2) FRONT (nose)!\n")
